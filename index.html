@@ -265,17 +265,6 @@
             line-height: 1.6;
         }
 
-        .spectrum-analyzer {
-            background: #0a0e27;
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        #spectrumCanvas {
-            height: 150px;
-        }
-
         @media (max-width: 768px) {
             h1 {
                 font-size: 2em;
@@ -293,33 +282,6 @@
             .piano-key.black {
                 width: 28px;
                 height: 65px;
-            }
-        }
-
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(0, 255, 255, 0.6);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: float 4s infinite linear;
-        }
-
-        @keyframes float {
-            from {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            to {
-                transform: translateY(-100px) rotate(360deg);
-                opacity: 0;
             }
         }
     </style>
@@ -348,11 +310,6 @@
 
             <div class="wave-display">
                 <canvas id="waveCanvas"></canvas>
-            </div>
-
-            <div class="spectrum-analyzer">
-                <h3 style="color: #00ffff; margin-bottom: 10px;">Analizador de Espectro</h3>
-                <canvas id="spectrumCanvas"></canvas>
             </div>
 
             <div class="controls-section">
@@ -431,14 +388,11 @@
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let oscillator = null;
         let gainNode = null;
-        let analyser = null;
         let isPlaying = false;
 
         // Canvas Setup
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
-        const spectrumCanvas = document.getElementById('spectrumCanvas');
-        const spectrumCtx = spectrumCanvas.getContext('2d');
 
         // Controls
         const ampSlider = document.getElementById('amplitude');
@@ -457,8 +411,6 @@
         function resizeCanvases() {
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
-            spectrumCanvas.width = spectrumCanvas.offsetWidth;
-            spectrumCanvas.height = spectrumCanvas.offsetHeight;
         }
         resizeCanvases();
         window.addEventListener('resize', resizeCanvases);
@@ -655,41 +607,6 @@
             ctx.fillText(`Período: ${periodMs} ms`, width - 150, 30);
         }
 
-        // Draw spectrum analyzer
-        function drawSpectrum() {
-            if (!analyser || !isPlaying) {
-                spectrumCtx.fillStyle = '#0a0e27';
-                spectrumCtx.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
-                return;
-            }
-            
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            analyser.getByteFrequencyData(dataArray);
-            
-            spectrumCtx.fillStyle = '#0a0e27';
-            spectrumCtx.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
-            
-            const barWidth = (spectrumCanvas.width / bufferLength) * 2.5;
-            let barHeight;
-            let x = 0;
-            
-            for (let i = 0; i < bufferLength; i++) {
-                barHeight = (dataArray[i] / 255) * spectrumCanvas.height;
-                
-                const gradient = spectrumCtx.createLinearGradient(0, spectrumCanvas.height - barHeight, 0, spectrumCanvas.height);
-                gradient.addColorStop(0, '#ff00ff');
-                gradient.addColorStop(1, '#00ffff');
-                
-                spectrumCtx.fillStyle = gradient;
-                spectrumCtx.fillRect(x, spectrumCanvas.height - barHeight, barWidth, barHeight);
-                
-                x += barWidth + 1;
-            }
-            
-            requestAnimationFrame(drawSpectrum);
-        }
-
         // Play/stop sound
         function toggleSound() {
             if (isPlaying) {
@@ -702,22 +619,18 @@
         function playSound() {
             oscillator = audioContext.createOscillator();
             gainNode = audioContext.createGain();
-            analyser = audioContext.createAnalyser();
             
             oscillator.type = waveTypeSelect.value === 'cosine' ? 'sine' : waveTypeSelect.value;
             oscillator.frequency.value = parseFloat(freqSlider.value);
             gainNode.gain.value = parseFloat(ampSlider.value);
             
             oscillator.connect(gainNode);
-            gainNode.connect(analyser);
-            analyser.connect(audioContext.destination);
+            gainNode.connect(audioContext.destination);
             
             oscillator.start();
             isPlaying = true;
             playButton.textContent = '⏸ DETENER';
             playButton.classList.add('playing');
-            
-            drawSpectrum();
         }
 
         function stopSound() {
@@ -804,21 +717,8 @@
             }
         });
 
-        // Create floating particles
-        function createParticles() {
-            for (let i = 0; i < 50; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 4 + 's';
-                particle.style.animationDuration = (4 + Math.random() * 4) + 's';
-                document.body.appendChild(particle);
-            }
-        }
-
         // Initialize
         createPianoKeys();
-        createParticles();
         updateValues();
         drawWave();
 
