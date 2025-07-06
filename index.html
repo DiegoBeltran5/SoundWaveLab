@@ -350,6 +350,11 @@
                 <canvas id="waveCanvas"></canvas>
             </div>
 
+            <div class="spectrum-analyzer">
+                <h3 style="color: #00ffff; margin-bottom: 10px;">Analizador de Espectro</h3>
+                <canvas id="spectrumCanvas"></canvas>
+            </div>
+
             <div class="controls-section">
                 <div class="control-group">
                     <h3>
@@ -650,7 +655,41 @@
             ctx.fillText(`Período: ${periodMs} ms`, width - 150, 30);
         }
 
-        
+        // Draw spectrum analyzer
+        function drawSpectrum() {
+            if (!analyser || !isPlaying) {
+                spectrumCtx.fillStyle = '#0a0e27';
+                spectrumCtx.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
+                return;
+            }
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+            
+            spectrumCtx.fillStyle = '#0a0e27';
+            spectrumCtx.fillRect(0, 0, spectrumCanvas.width, spectrumCanvas.height);
+            
+            const barWidth = (spectrumCanvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = (dataArray[i] / 255) * spectrumCanvas.height;
+                
+                const gradient = spectrumCtx.createLinearGradient(0, spectrumCanvas.height - barHeight, 0, spectrumCanvas.height);
+                gradient.addColorStop(0, '#ff00ff');
+                gradient.addColorStop(1, '#00ffff');
+                
+                spectrumCtx.fillStyle = gradient;
+                spectrumCtx.fillRect(x, spectrumCanvas.height - barHeight, barWidth, barHeight);
+                
+                x += barWidth + 1;
+            }
+            
+            requestAnimationFrame(drawSpectrum);
+        }
+
         // Play/stop sound
         function toggleSound() {
             if (isPlaying) {
@@ -678,7 +717,7 @@
             playButton.textContent = '⏸ DETENER';
             playButton.classList.add('playing');
             
-    
+            drawSpectrum();
         }
 
         function stopSound() {
